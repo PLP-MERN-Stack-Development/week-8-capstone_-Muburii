@@ -1,26 +1,19 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
-const mongoose = require("mongoose"); // Import mongoose directly
+const mongoose = require("mongoose");
+const connectDB = require("./config/db"); // Assuming your DB file is at config/db.js
+
 const app = express();
 
-// Connect to MongoDB
-const connectDB = async () => {
-  try {
-    await mongoose.connect(process.env.MONGO_URI);
-    console.log('MongoDB connected successfully!');
-  } catch (error) {
-    console.error(`MongoDb connection failed: ${error.message}`);
-    process.exit(1);
-  }
-};
+// Connect to DB
 connectDB();
 
 // Middleware
 app.use(cors());
 app.use(express.json());
 
-// Health Check Endpoint
+// Health Check
 app.get("/health", (req, res) => {
   const dbStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";
   res.status(200).json({
@@ -31,6 +24,13 @@ app.get("/health", (req, res) => {
 });
 
 // Routes
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/students", require("./routes/studentRoutes"));
+app.use("/api/grades", require("./routes/gradeRoutes"));
+app.use("/api/parents", require("./routes/parentRoutes"));
+app.use("/api/dashboard", require("./routes/dashboardRoutes"));
 
+// Start server
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
