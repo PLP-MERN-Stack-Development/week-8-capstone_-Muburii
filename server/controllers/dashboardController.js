@@ -1,6 +1,6 @@
-const Grade = require("../models/gradeModel");
-const Student = require("../models/studentModel");
-const User = require("../models/userModel");
+const Grade = require("../models/grade");
+const Student = require("../models/student");
+const User = require("../models/user");
 
 // STUDENT DASHBOARD
 // @route   GET /api/dashboard/student

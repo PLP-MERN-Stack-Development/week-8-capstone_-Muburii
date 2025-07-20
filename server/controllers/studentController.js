@@ -1,6 +1,6 @@
 // controllers/studentController.js
-const Student = require("../models/studentModel");
-const Grade = require("../models/gradeModel");
+const Student = require("../models/student");
+const Grade = require("../models/grade");
 
 // @desc    Create student profile (after user registers)
 // @route   POST /api/students

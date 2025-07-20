@@ -1,6 +1,6 @@
-const Student = require("../models/studentModel");
-const Grade = require("../models/gradeModel");
-const User = require("../models/userModel");
+const Student = require("../models/student");
+const Grade = require("../models/grade");
+const User = require("../models/user");
 
 // Assuming parent's user account has a linked studentId field
 

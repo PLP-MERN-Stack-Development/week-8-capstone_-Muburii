@@ -1,5 +1,5 @@
 // controllers/gradeController.js
-const Grade = require("../models/gradeModel");
+const Grade = require("../models/grade");
 
 // @desc    Add a new grade (teacher only)
 // @route   POST /api/grades
