@@ -1,38 +1,90 @@
+// controllers/authController.js
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const User = require('../models/user');
+const User = require('../models/User');
+const Teacher = require('../models/Teacher');
+const Student = require('../models/Student');
+const Parent = require('../models/Parent');
 
-// Signup
-exports.signup = async (req, res) => {
-  const { email, username, password } = req.body;
+// Unified Login
+const login = async (req, res) => {
+  const { identifier, password } = req.body;
 
-  if (!email || !username || !password) {
-    return res.status(400).json({ message: "Missing fields" });
+  try {
+    // Find user by email or admission number
+    const user = await User.findOne({
+      $or: [
+        { email: identifier },
+        { 'studentId.admNo': identifier }
+      ]
+    }).populate('studentId');
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+      return res.status(400).json({ message: 'Invalid credentials' });
+    }
+
+    // Generate JWT
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+      expiresIn: '8h'
+    });
+
+    res.json({ 
+      token,
+      role: user.role,
+      userId: user._id,
+      profileId: user[`${user.role}Id`]
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
   }
-
-  const exists = await User.findOne({ email });
-  if (exists) return res.status(400).json({ message: "User already exists" });
-
-  const hashedPassword = await bcrypt.hash(password, 10);
-  // Default role is developer
-  const user = await User.create({ email, username, password: hashedPassword, role: "developer" });
-
-  // 🛠 Include role in token
-  const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token });
 };
 
-// Login
-exports.login = async (req, res) => {
-  const { email, password } = req.body;
+// Teacher Registration
+const registerTeacher = async (req, res) => {
+  const { name, email, password, phone } = req.body;
 
-  const user = await User.findOne({ email });
-  if (!user) return res.status(404).json({ message: "Invalid credentials" });
+  try {
+    // Check if user exists
+    if (await User.findOne({ email })) {
+      return res.status(400).json({ message: 'Email already registered' });
+    }
 
-  const match = await bcrypt.compare(password, user.password);
-  if (!match) return res.status(401).json({ message: "Invalid credentials" });
+    // Create teacher profile
+    const teacher = new Teacher({ name, email, phone });
+    await teacher.save();
 
-  // 🛠 Include role in token
-  const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, { expiresIn: "7d" });
-  res.json({ token });
+    // Create user account
+    const hashedPassword = await bcrypt.hash(password, 12);
+    const user = new User({
+      email,
+      password: hashedPassword,
+      role: 'teacher',
+      teacherId: teacher._id
+    });
+
+    await user.save();
+
+    res.status(201).json({ message: 'Teacher registered successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Registration failed' });
+  }
 };
+// Get logged-in user profile
+const getMe = async (req, res) => {
+  try {
+    // User is attached to request by auth middleware
+    const user = req.user;
+    
+    // Respond with user information (without password)
+    res.json({
+      id: user._id,
+      email: user.email,
+      role: user.role,
+      profileId: user[`${user.role}Id`]
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = { login, registerTeacher, getMe };

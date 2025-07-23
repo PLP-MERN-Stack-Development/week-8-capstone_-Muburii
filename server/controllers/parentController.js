@@ -1,39 +1,99 @@
-const Student = require("../models/student");
-const Grade = require("../models/grade");
-const User = require("../models/user");
+const Parent = require('../models/Parent');
+const Student = require('../models/Student');
 
-// Assuming parent's user account has a linked studentId field
-
-// @desc    Get the profile of the linked student
-// @route   GET /api/parents/me/student
-exports.getLinkedStudentProfile = async (req, res) => {
+// 👨‍👩‍👧 GET /api/parents/profile
+const getParentProfile = async (req, res) => {
   try {
-    const parentUser = await User.findById(req.user.id);
-    if (!parentUser || !parentUser.studentId) {
-      return res.status(404).json({ message: "Linked student not found" });
+    const parentUserId = req.user.id;
+
+    const parent = await Parent.findOne({ userId: parentUserId }).populate('studentId', 'name admNo className');
+
+    if (!parent) {
+      return res.status(404).json({ message: 'Parent profile not found' });
     }
 
-    const student = await Student.findById(parentUser.studentId);
-    if (!student) return res.status(404).json({ message: "Student profile not found" });
+    res.status(200).json({
+      _id: parent._id,
+      name: parent.name,
+      email: parent.email,
+      phone: parent.phone,
+      child: parent.studentId, // populated
+    });
 
-    res.json(student);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    console.error('Error fetching parent profile:', error.message);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// @desc    Get all grades for the linked student
-// @route   GET /api/parents/me/grades
-exports.getLinkedStudentGrades = async (req, res) => {
+// 👨‍👩‍👧 GET /api/parents/children/:id/grades
+const getChildGrades = async (req, res) => {
   try {
-    const parentUser = await User.findById(req.user.id);
-    if (!parentUser || !parentUser.studentId) {
-      return res.status(404).json({ message: "Linked student not found" });
+    const parentUserId = req.user.id;
+    const studentId = req.params.id;
+
+    const parent = await Parent.findOne({ userId: parentUserId });
+
+    if (!parent || parent.studentId.toString() !== studentId) {
+      return res.status(403).json({ message: 'Unauthorized access to child grades' });
     }
 
-    const grades = await Grade.find({ studentId: parentUser.studentId });
-    res.json(grades);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+    const student = await Student.findById(studentId)
+      .populate('grades.subject', 'name')
+      .populate('className', 'name');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    res.status(200).json({
+      name: student.name,
+      admNo: student.admNo,
+      className: student.className,
+      grades: student.grades,
+    });
+
+  } catch (error) {
+    console.error('Error fetching child grades:', error.message);
+    res.status(500).json({ message: 'Server error' });
   }
+};
+
+// 👨‍👩‍👧 GET /api/parents/child
+const getChildProfile = async (req, res) => {
+  try {
+    const parentUserId = req.user.id;
+
+    const parent = await Parent.findOne({ userId: parentUserId });
+
+    if (!parent || !parent.studentId) {
+      return res.status(404).json({ message: 'Student not linked to parent' });
+    }
+
+    const student = await Student.findById(parent.studentId)
+      .populate('className', 'name')
+      .populate('grades.subject', 'name');
+
+    if (!student) {
+      return res.status(404).json({ message: 'Student not found' });
+    }
+
+    res.status(200).json({
+      _id: student._id,
+      name: student.name,
+      admNo: student.admNo,
+      className: student.className,
+      grades: student.grades,
+    });
+
+  } catch (error) {
+    console.error('Parent Access Error:', error.message);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = {
+  getParentProfile,
+  getChildGrades,
+  getChildProfile,
 };

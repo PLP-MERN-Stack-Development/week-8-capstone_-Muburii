@@ -1,60 +1,84 @@
-// controllers/gradeController.js
-const Grade = require("../models/grade");
+const Grade = require('../models/Grade');
+const Student = require('../models/Student');
+const Subject = require('../models/Subject');
 
-// @desc    Add a new grade (teacher only)
-// @route   POST /api/grades
-exports.addGrade = async (req, res) => {
+// ➕ POST /grades → Add grade
+const addGrade = async (req, res) => {
   try {
-    const grade = new Grade(req.body);
-    await grade.save();
-    res.status(201).json(grade);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
-  }
-};
+    const { studentId, subjectId, term, score } = req.body;
 
-// @desc    Get a specific grade by ID
-// @route   GET /api/grades/:id
-exports.getGradeById = async (req, res) => {
-  try {
-    const grade = await Grade.findById(req.params.id)
-      .populate("studentId", "name") // optionally populate
-      .populate("teacherId", "name");
-    
-    if (!grade) return res.status(404).json({ message: "Grade not found" });
+    // Check student and subject exist
+    const student = await Student.findById(studentId);
+    const subject = await Subject.findById(subjectId);
 
-    res.json(grade);
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
-  }
-};
+    if (!student || !subject) {
+      return res.status(404).json({ message: 'Student or subject not found' });
+    }
 
-// @desc    Update a grade
-// @route   PUT /api/grades/:id
-exports.updateGrade = async (req, res) => {
-  try {
-    const grade = await Grade.findByIdAndUpdate(req.params.id, req.body, {
-      new: true,
-      runValidators: true,
+    // Check if this grade already exists for same student/subject/term
+    const existing = await Grade.findOne({
+      student: studentId,
+      subject: subjectId,
+      term,
     });
 
-    if (!grade) return res.status(404).json({ message: "Grade not found" });
+    if (existing) {
+      return res.status(400).json({ message: 'Grade already exists for this subject and term' });
+    }
 
-    res.json(grade);
-  } catch (err) {
-    res.status(400).json({ message: err.message });
+    const newGrade = new Grade({
+      student: studentId,
+      subject: subjectId,
+      term,
+      score,
+    });
+
+    await newGrade.save();
+
+    res.status(201).json(newGrade);
+  } catch (error) {
+    console.error('Error adding grade:', error);
+    res.status(500).json({ message: 'Server error' });
   }
 };
 
-// @desc    Delete a grade
-// @route   DELETE /api/grades/:id
-exports.deleteGrade = async (req, res) => {
+// 📄 GET /grades/student/:id → View specific student’s grades
+const getGradesByStudent = async (req, res) => {
   try {
-    const grade = await Grade.findByIdAndDelete(req.params.id);
-    if (!grade) return res.status(404).json({ message: "Grade not found" });
+    const { id } = req.params;
 
-    res.json({ message: "Grade deleted" });
-  } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    const grades = await Grade.find({ student: id })
+      .populate('subject', 'name')
+      .sort({ term: 1 });
+
+    if (!grades.length) {
+      return res.status(404).json({ message: 'No grades found for this student' });
+    }
+
+    res.status(200).json(grades);
+  } catch (error) {
+    console.error('Error fetching grades:', error);
+    res.status(500).json({ message: 'Server error' });
   }
+};
+
+// 📄 GET /grades → View all grades (optional)
+const getAllGrades = async (req, res) => {
+  try {
+    const grades = await Grade.find()
+      .populate('student', 'name admNo')
+      .populate('subject', 'name')
+      .sort({ createdAt: -1 });
+
+    res.status(200).json(grades);
+  } catch (error) {
+    console.error('Error fetching all grades:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+module.exports = {
+  addGrade,
+  getGradesByStudent,
+  getAllGrades,
 };
