@@ -116,6 +116,66 @@ const assignGrade = async (req, res) => {
     res.status(500).json({ message: 'Failed to assign grade' });
   }
 };
+// 8. Get Average Grades per Class and Subject
+const getClassSubjectAverages = async (req, res) => {
+  try {
+    const pipeline = [
+      {
+        $lookup: {
+          from: 'students',
+          localField: 'student',
+          foreignField: '_id',
+          as: 'studentData'
+        }
+      },
+      { $unwind: '$studentData' },
+      {
+        $lookup: {
+          from: 'subjects',
+          localField: 'subject',
+          foreignField: '_id',
+          as: 'subjectData'
+        }
+      },
+      { $unwind: '$subjectData' },
+      {
+        $group: {
+          _id: {
+            class: '$studentData.className',
+            subject: '$subjectData._id',
+          },
+          averageMarks: { $avg: '$marks' },
+          classId: { $first: '$studentData.className' },
+          subjectId: { $first: '$subjectData._id' },
+          subjectName: { $first: '$subjectData.name' }
+        }
+      },
+      {
+        $lookup: {
+          from: 'classes',
+          localField: 'classId',
+          foreignField: '_id',
+          as: 'classData'
+        }
+      },
+      { $unwind: '$classData' },
+      {
+        $project: {
+          className: '$classData.name',
+          subjectName: 1,
+          averageMarks: 1
+        }
+      }
+    ];
+
+    const results = await Grade.aggregate(pipeline);
+    res.status(200).json(results);
+  } catch (error) {
+    console.error('Error in grade aggregation:', error);
+    res.status(500).json({ message: 'Failed to compute averages' });
+  }
+};
+
 
 module.exports = {
   addStudent,
@@ -125,4 +185,5 @@ module.exports = {
   createClass,
   createSubject,
   assignGrade,
+  getClassSubjectAverages,
 };

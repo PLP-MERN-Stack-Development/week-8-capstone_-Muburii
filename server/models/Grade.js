@@ -1,8 +1,10 @@
 const mongoose = require('mongoose');
 
 const gradeSchema = new mongoose.Schema({
-  subject: { type: String, required: true },
+  student: { type: mongoose.Schema.Types.ObjectId, ref: 'Student', required: true },
+  subject: { type: mongoose.Schema.Types.ObjectId, ref: 'Subject', required: true },
   score: { type: Number, required: true },
+  class: { type: mongoose.Schema.Types.ObjectId, ref: 'Class' },
   totalMarks: { type: Number, default: 100 },
   percentage: Number,
   grade: String, // A+, A, B+, etc.

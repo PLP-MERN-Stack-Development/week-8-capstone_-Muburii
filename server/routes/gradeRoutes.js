@@ -19,4 +19,6 @@ router.get('/student/:id', getGradesByStudent);
 // 📄 Optional: Get all grades
 router.get('/', getAllGrades);
 
+router.get('/class/:classId/averages', getClassSubjectAverages);
+
 module.exports = router;

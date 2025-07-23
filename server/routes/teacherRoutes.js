@@ -25,5 +25,7 @@ router.get('/parents', teacherController.getAllParents);
 // 🧑‍🏫 CLASSES & SUBJECTS
 router.post('/classes', teacherController.createClass);
 router.post('/subjects', teacherController.createSubject);
+router.get('/analytics/averages', teacherController.getClassSubjectAverages);
+
 
 module.exports = router;

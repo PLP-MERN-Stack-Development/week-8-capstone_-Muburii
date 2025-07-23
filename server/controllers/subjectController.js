@@ -3,22 +3,30 @@ const Subject = require('../models/Subject');
 // ➕ Add new subject
 const createSubject = async (req, res) => {
   try {
-    const { name } = req.body;
+    const { name, code, description } = req.body;
+    const teacherId = req.user._id; // assuming the logged-in user is a teacher
 
-    const existing = await Subject.findOne({ name });
+    // Check for existing subject by code
+    const existing = await Subject.findOne({ code });
     if (existing) {
-      return res.status(400).json({ message: 'Subject already exists' });
+      return res.status(400).json({ message: 'Subject with this code already exists' });
     }
 
-    const newSubject = new Subject({ name });
-    await newSubject.save();
+    const newSubject = new Subject({
+      name,
+      code,
+      description,
+      teacher: teacherId,
+    });
 
+    await newSubject.save();
     res.status(201).json(newSubject);
   } catch (error) {
     console.error('Error creating subject:', error);
     res.status(500).json({ message: 'Server error' });
   }
 };
+
 
 // 📄 View all subjects
 const getAllSubjects = async (req, res) => {
